@@ -19,14 +19,20 @@ function play(script: string, at: number) {
 }
 
 /** Drags `#x` to `x` at `at`, writes the plan into the script, and replays the written file there. */
-function dragAndReplay(script: string, x: number, at: number, selectedPct: number | null = null) {
+function dragAndReplay(
+  script: string,
+  x: number,
+  at: number,
+  selectedPct: number | null = null,
+  { y, backfill }: { y?: number; backfill?: Record<string, number> } = {},
+) {
   const box = document.body.appendChild(document.createElement("div"));
   box.id = "x";
   const { timeline, iframe } = play(script, at);
   usePlayerStore.setState({ currentTime: at, activeKeyframePct: selectedPct });
   const anim = parseGsapScriptAcorn(script).animations[0]!;
   const selection = { id: "x", selector: "#x", element: box } as DomEditSelection;
-  const plan = planValueEdit(selection, anim, { x }, iframe);
+  const plan = planValueEdit(selection, anim, { x, ...(y != null && { y }) }, iframe, { backfill });
   timeline.kill();
   if (!plan.ok) return { plan };
   const written = replaceTweenWithKeyframesInScript(script, anim.id, plan.mutation)!;
@@ -88,6 +94,21 @@ it("keeps an array step that leaves a channel out holding it, as GSAP played it"
   const replay = play(written!, 2);
   expect(gsap.getProperty("#x", "x")).toBe(97);
   replay.timeline.kill();
+});
+
+it("holds a newly animated channel at rest through a step list's opening pause", () => {
+  const pauseFirst =
+    "keyframes: [{ duration: 1 }, { x: 60, duration: 1 }, { x: 180, duration: 1 }]";
+  const { written } = dragAndReplay(script(pauseFirst), 37, 2, null, { y: 11, backfill: { y: 0 } });
+  for (const [t, y] of [
+    [0.5, 0],
+    [2, 11],
+  ]) {
+    gsap.set("#x", { clearProps: "all" }); // a reloaded preview starts the tween from rest
+    const replay = play(written!, t!);
+    expect(gsap.getProperty("#x", "y")).toBeCloseTo(y!, 2);
+    replay.timeline.kill();
+  }
 });
 
 it("holds a channel at its start until the array step that first animates it", () => {

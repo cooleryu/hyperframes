@@ -182,14 +182,18 @@ function heldEnds(
 }
 
 /** An array step without a channel holds it, where a percentage keyframe would tween through it. */
-function holdOmittedChannels(steps: Keyframe[], implicit: ImplicitEndValue): boolean {
+function holdOmittedChannels(
+  steps: Keyframe[],
+  implicit: ImplicitEndValue,
+  backfilled: Record<string, number>,
+): boolean {
   const props = new Set(steps.flatMap((kf) => Object.keys(kf.properties)));
   for (const prop of props) {
     let held: number | string | null | undefined;
     for (const kf of steps) {
       if (kf.properties[prop] != null) held = kf.properties[prop];
       else {
-        held ??= implicit(prop, "start");
+        held ??= backfilled[prop] ?? implicit(prop, "start");
         if (held == null) return false;
         kf.properties[prop] = held;
       }
@@ -269,7 +273,8 @@ export function planValueAtPlayhead(edit: PlayheadEdit): PlayheadEditPlan {
     upsert(keyframes, before ? 0 : 100, { ...held, ...values }, before ? undefined : linear);
   }
 
-  if (!holdOmittedChannels(steps, edit.implicitEndValue)) return refuse("implicit-end-unknown");
+  if (!holdOmittedChannels(steps, edit.implicitEndValue, backfilled))
+    return refuse("implicit-end-unknown");
   keyframes.sort((a, b) => a.percentage - b.percentage);
   return {
     ok: true,

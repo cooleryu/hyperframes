@@ -86,7 +86,7 @@ const IN_CODE = "Edit them in the Code tab.";
 const GSAP_EDIT_DETAIL_COPY: Partial<Record<GsapEditBlockDetail, string>> = {
   "array-step-delay": `${STEP_LIST} with its own delay, which Studio can't keep while it edits them. ${IN_CODE}`,
   "array-step-callback": `${STEP_LIST} that runs code as it plays (like onComplete), which an edit would run again. ${IN_CODE}`,
-  "array-step-config": `${STEP_LIST} with its own repeat, yoyo or stagger, which Studio can't keep while it edits them. ${IN_CODE}`,
+  "array-step-config": `${STEP_LIST} with its own tween setting (like repeat or stagger), which Studio can't keep while it edits them. ${IN_CODE}`,
   "array-step-computed": `${STEP_LIST} whose value comes from code, which Studio can't keep while it edits them. ${IN_CODE}`,
   "array-step-relative": `${STEP_LIST} with a relative value (like "+=40"), which an edit would apply again. ${IN_CODE}`,
   "array-step-random": `${STEP_LIST} with a random() value, which an edit would roll again. ${IN_CODE}`,

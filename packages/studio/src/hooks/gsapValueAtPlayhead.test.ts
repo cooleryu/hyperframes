@@ -606,7 +606,12 @@ describe("a keyframes array the percentage rewrite would change", () => {
       "array-step-callback",
       "runs code",
     ],
-    ["a step repeat", { x: 100, repeat: 2 }, "array-step-config", "repeat, yoyo or stagger"],
+    [
+      "a step repeat",
+      { x: 100, repeat: 2 },
+      "array-step-config",
+      "tween setting (like repeat or stagger)",
+    ],
     ["a computed value", { x: "__raw:offset()" }, "array-step-computed", "comes from code"],
     ["a relative value", { x: "-=40" }, "array-step-relative", '"+=40"'],
     ["a random value", { x: "random(0, 300)" }, "array-step-random", "random()"],
