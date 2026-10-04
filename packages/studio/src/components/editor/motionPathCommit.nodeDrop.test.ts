@@ -144,6 +144,38 @@ it("a drop the writer refuses rejects with the reason, writes nothing and select
   expect(usePlayerStore.getState().activeKeyframePct).toBeNull();
 });
 
+it("a drop on a step list with a step delay says the delay blocks it and writes nothing", async () => {
+  const el = document.body.appendChild(document.createElement("div"));
+  el.id = "box";
+  const keys = tween({
+    id: "#box-to-0-position",
+    method: "to",
+    properties: {},
+    resolvedStart: 0,
+    duration: 3,
+    keyframes: {
+      format: "object-array",
+      keyframes: [
+        { percentage: 50, properties: { x: 100, delay: 0.5 } },
+        { percentage: 100, properties: { x: 200, delay: 0.5 } },
+      ],
+    },
+  });
+  usePlayerStore.setState({ autoKeyframeEnabled: true, activeKeyframePct: null });
+  const commitMutation = vi.fn(async () => {});
+  const drop = commitNodeDrop({
+    ref: { type: "keyframe", pct: 100 },
+    at: { x: 150, y: 0 },
+    animId: keys.id,
+    anim: keys,
+    selection: { id: "box", selector: "#box", element: el } as DomEditSelection,
+    iframe: previewWith(el, [], { x: 0, y: 0 }),
+    commitMutation,
+  });
+  await expect(drop).rejects.toThrow(/its own delay.*Code tab/);
+  expect(commitMutation).not.toHaveBeenCalled();
+});
+
 it("with auto-keyframe off, a step's node shifts the path by its own keyframe's move", async () => {
   const el = document.body.appendChild(document.createElement("div"));
   el.id = "box";

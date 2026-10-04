@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import { usePlayerStore } from "../player/store/playerStore";
-import { GSAP_EDIT_BLOCK_COPY } from "./gsapEditOutcome";
+import { GSAP_EDIT_BLOCK_COPY, GsapEditBlockedError } from "./gsapEditOutcome";
 import { liveTween, previewWith, tween } from "./gsapParsedTween.test-helpers";
 import { tryGsapResizeIntercept } from "./gsapResizeIntercept";
 import { tryGsapDragIntercept, tryGsapRotationIntercept } from "./gsapRuntimeBridge";
@@ -595,7 +595,10 @@ it("refuses a tween whose selector also animates a sibling, before it plans anyt
 });
 
 describe("a keyframes array the percentage rewrite would change", () => {
-  const steps = (...properties: Array<Record<string, number | string>>) =>
+  const steps = (
+    properties: Array<Record<string, number | string>>,
+    edit: Partial<PlayheadEdit> = {},
+  ) =>
     planValueAtPlayhead({
       anim: tween({
         method: "to",
@@ -610,24 +613,52 @@ describe("a keyframes array the percentage rewrite would change", () => {
       at: { percentage: 100 },
       values: { x: 50 },
       implicitEndValue: () => 0,
+      ...edit,
     });
 
   it.each([
-    ["a step delay", { x: 100, delay: 0.5 }],
-    ["a step callback", { x: 100, onComplete: "__raw:done" }],
-    ["a relative value", { x: "-=40" }],
-    ["a random value", { x: "random(0, 300)" }],
-  ])("refuses %s instead of retiming, re-running or moving it", (_, step) => {
-    expect(steps({ x: 60 }, step, { x: 180 })).toEqual({
-      ok: false,
-      reason: "array-step-not-rewritable",
-    });
+    ["a step delay", { x: 100, delay: 0.5 }, "array-step-delay", "its own delay"],
+    ["a step callback", { x: 100, onComplete: "__raw:done" }, "array-step-callback", "runs code"],
+    [
+      "an unlisted callback",
+      { x: 100, onInterrupt: "__raw:stop" },
+      "array-step-callback",
+      "runs code",
+    ],
+    ["a step repeat", { x: 100, repeat: 2 }, "array-step-config", "repeat, yoyo or stagger"],
+    ["a computed value", { x: "__raw:offset()" }, "array-step-computed", "comes from code"],
+    ["a relative value", { x: "-=40" }, "array-step-relative", '"+=40"'],
+    ["a random value", { x: "random(0, 300)" }, "array-step-random", "random()"],
+    [
+      "a random value inside a string",
+      { filter: "blur(random(1, 9)px)" },
+      "array-step-random",
+      "random()",
+    ],
+  ] as const)("refuses %s and says so", (_, step, reason, says) => {
+    expect(steps([{ x: 60 }, step, { x: 180 }])).toEqual({ ok: false, reason });
+    const message = new GsapEditBlockedError("keyframes-uneditable", reason).message;
+    expect(message).toContain(says);
+    expect(message).toContain("Code tab");
   });
 
   it("rewrites absolute values, colours included", () => {
-    const result = steps({ x: 60, color: "#fff" }, { x: 120, color: "rgb(0, 0, 0)" }, { x: 180 });
+    const result = steps([{ x: 60, color: "#fff" }, { x: 120, color: "rgb(0, 0, 0)" }, { x: 180 }]);
     expect(result.ok && result.mutation.keyframes.map((k) => k.properties.x)).toEqual([
       60, 120, 50,
+    ]);
+  });
+
+  it("holds a pause step at the dropped value of a channel the drop starts animating", () => {
+    const result = steps([{ x: 60 }, {}, { x: 180 }], {
+      at: { percentage: 100 / 3 },
+      values: { x: 37, y: 11 },
+      backfill: { y: 0 },
+    });
+    expect(result.ok && result.mutation.keyframes.map((k) => k.properties)).toEqual([
+      { x: 37, y: 11 },
+      { x: 37, y: 11 },
+      { x: 180, y: 0 },
     ]);
   });
 });
