@@ -593,3 +593,41 @@ it("refuses a tween whose selector also animates a sibling, before it plans anyt
   });
   sibling.remove();
 });
+
+describe("a keyframes array the percentage rewrite would change", () => {
+  const steps = (...properties: Array<Record<string, number | string>>) =>
+    planValueAtPlayhead({
+      anim: tween({
+        method: "to",
+        properties: {},
+        resolvedStart: 0,
+        duration: 3,
+        keyframes: {
+          format: "object-array",
+          keyframes: properties.map((p, i) => ({ percentage: ((i + 1) / 3) * 100, properties: p })),
+        },
+      }),
+      at: { percentage: 100 },
+      values: { x: 50 },
+      implicitEndValue: () => 0,
+    });
+
+  it.each([
+    ["a step delay", { x: 100, delay: 0.5 }],
+    ["a step callback", { x: 100, onComplete: "__raw:done" }],
+    ["a relative value", { x: "-=40" }],
+    ["a random value", { x: "random(0, 300)" }],
+  ])("refuses %s instead of retiming, re-running or moving it", (_, step) => {
+    expect(steps({ x: 60 }, step, { x: 180 })).toEqual({
+      ok: false,
+      reason: "array-step-not-rewritable",
+    });
+  });
+
+  it("rewrites absolute values, colours included", () => {
+    const result = steps({ x: 60, color: "#fff" }, { x: 120, color: "rgb(0, 0, 0)" }, { x: 180 });
+    expect(result.ok && result.mutation.keyframes.map((k) => k.properties.x)).toEqual([
+      60, 120, 50,
+    ]);
+  });
+});

@@ -33,6 +33,7 @@ export type GsapEditBlockDetail =
 export type PlayheadEditRefusal =
   | "eased-keyframes"
   | "simple-array-keyframes"
+  | "array-step-not-rewritable"
   | "unknown-ease"
   | "implicit-end-unknown"
   | "not-a-tween"

@@ -1,4 +1,5 @@
 import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
+import { isTweenConfigKey } from "@hyperframes/parsers/gsap-constants";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import { usePlayerStore } from "../player/store/playerStore";
 import { resolveTweenDuration, resolveTweenStart } from "../utils/globalTimeCompiler";
@@ -80,6 +81,16 @@ function refuse(reason: PlayheadEditRefusal): { ok: false; reason: PlayheadEditR
   return { ok: false, reason };
 }
 
+/** A step a percentage keyframe can stand in for: absolute values on animated channels only. A step's
+ *  delay, callback, relative (`-=40`) or random value would be lost, moved or re-run by the rewrite. */
+function rewritableStep(step: { properties: Props }): boolean {
+  return Object.entries(step.properties).every(
+    ([key, value]) =>
+      !isTweenConfigKey(key) &&
+      (typeof value === "number" || !/^(__raw:|[-+*/]=|random\()/.test(value)),
+  );
+}
+
 // fallow-ignore-next-line complexity
 function normalize(edit: PlayheadEdit): Normalized | { reason: PlayheadEditRefusal } {
   const { anim } = edit;
@@ -87,6 +98,8 @@ function normalize(edit: PlayheadEdit): Normalized | { reason: PlayheadEditRefus
   if (data) {
     if (data.format === "simple-array") return { reason: "simple-array-keyframes" };
     const arrayStep = data.format === "object-array";
+    if (arrayStep && !data.keyframes.every(rewritableStep))
+      return { reason: "array-step-not-rewritable" };
     return {
       runEase: data.ease ?? anim.ease,
       keyframes: data.keyframes.map((kf) => ({

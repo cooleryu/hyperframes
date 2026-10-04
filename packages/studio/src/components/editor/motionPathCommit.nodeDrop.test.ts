@@ -1,10 +1,20 @@
 // @vitest-environment happy-dom
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, onTestFinished, vi } from "vitest";
 import type { DomEditSelection } from "./domEditing";
 import { liveTween, previewWith, tween } from "../../hooks/gsapParsedTween.test-helpers";
 import { usePlayerStore } from "../../player/store/playerStore";
 import { GsapEditBlockedError } from "../../hooks/gsapEditOutcome";
-import { commitNodeDrop } from "./motionPathCommit";
+import { commitNodeDrop, nodeDropLabel } from "./motionPathCommit";
+
+it("names a node drop for its undo entry by what it moved", () => {
+  const { autoKeyframeEnabled } = usePlayerStore.getState();
+  onTestFinished(() => usePlayerStore.setState({ autoKeyframeEnabled }));
+  usePlayerStore.setState({ autoKeyframeEnabled: true });
+  expect(nodeDropLabel({ type: "keyframe", pct: 50 })).toBe("Move keyframe");
+  usePlayerStore.setState({ autoKeyframeEnabled: false });
+  expect(nodeDropLabel({ type: "keyframe", pct: 50 })).toBe("Move animation path");
+  expect(nodeDropLabel({ type: "waypoint", index: 0 })).toBe("Move waypoint");
+});
 
 afterEach(() => {
   usePlayerStore.setState({ currentTime: 0, activeKeyframePct: null, requestedSeekTime: null });

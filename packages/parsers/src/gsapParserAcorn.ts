@@ -18,7 +18,12 @@ import type {
   GsapPercentageKeyframe,
   ParsedGsap,
 } from "./gsapSerialize.js";
-import { classifyTweenPropertyGroup } from "./gsapConstants.js";
+import {
+  BUILTIN_VAR_KEYS,
+  classifyTweenPropertyGroup,
+  DROPPED_VAR_KEYS,
+  EXTRAS_KEYS,
+} from "./gsapConstants.js";
 import { buildArcPath } from "./gsapSerialize.js";
 import { inlineComputedTimelines, readProvenance } from "./gsapInline.js";
 import { getObjectArrayKeyframeTiming } from "./gsapObjectArrayTiming.js";
@@ -858,21 +863,6 @@ function findTimelineVar(ast: any, scope?: ScopeBindings): TimelineDetection {
 }
 
 // ── Tween call collection ─────────────────────────────────────────────────────
-
-/** Keys stored on dedicated GsapAnimation fields (not in properties/extras). */
-const BUILTIN_VAR_KEYS = new Set(["duration", "ease", "delay"]);
-/** Keys never preserved (callbacks / advanced patterns). */
-const DROPPED_VAR_KEYS = new Set(["onComplete", "onStart", "onUpdate", "onRepeat"]);
-/** Keys that go in `extras` — non-editable GSAP config that must survive round-trips. */
-const EXTRAS_KEYS = new Set([
-  "stagger",
-  "yoyo",
-  "repeat",
-  "repeatDelay",
-  "snap",
-  "overwrite",
-  "immediateRender",
-]);
 
 export interface TweenCallInfo {
   node: any;
