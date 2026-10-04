@@ -1082,6 +1082,9 @@ function computeKeyframesTotalDuration(
   return getObjectArrayKeyframeTiming(durations)?.totalDuration;
 }
 
+const isFullyReadableStep = (el: any) =>
+  el?.type === "ObjectExpression" && !el.properties.some((p: any) => p.type === "SpreadElement");
+
 // fallow-ignore-next-line complexity
 function parseObjectArrayKeyframes(
   node: any,
@@ -1096,7 +1099,7 @@ function parseObjectArrayKeyframes(
   }> = [];
 
   for (const el of elements) {
-    if (!el || el.type !== "ObjectExpression") continue;
+    if (!isFullyReadableStep(el)) return undefined;
     const record = objectExpressionToRecord(el, scope, source);
     const properties: Record<string, number | string> = {};
     let duration: unknown;

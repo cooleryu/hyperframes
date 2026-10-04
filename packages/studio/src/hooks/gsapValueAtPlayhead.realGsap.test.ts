@@ -77,6 +77,22 @@ it("times array steps on their own timeline, which GSAP stretches over the tween
   expect(shown).toBeCloseTo(130, 2);
 });
 
+it("keeps an array step that leaves a channel out holding it, as GSAP played it", () => {
+  const hold = "keyframes: [{ x: 60, duration: 1 }, { duration: 1 }, { x: 180, duration: 1 }]";
+  const { written } = dragAndReplay(script(hold), 97, 1);
+  const replay = play(written!, 2);
+  expect(gsap.getProperty("#x", "x")).toBe(97);
+  replay.timeline.kill();
+});
+
+it("holds a channel at its start until the array step that first animates it", () => {
+  const late = "keyframes: [{ x: 60 }, { x: 120, y: 50 }], duration: 2";
+  const { written } = dragAndReplay(script(late), 200, 2);
+  const replay = play(written!, 1);
+  expect(gsap.getProperty("#x", "y")).toBe(0);
+  replay.timeline.kill();
+});
+
 it("changes a selected array keyframe in place, though GSAP reaches it at its step's end", () => {
   // The parse places the middle of three equal steps at 50%; GSAP reaches it at 2 s of 3.
   const { plan, shown } = dragAndReplay(

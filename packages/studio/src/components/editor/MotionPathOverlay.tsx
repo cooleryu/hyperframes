@@ -23,6 +23,7 @@ import {
   commitCreatePath,
   commitNodeDrop,
   commitRemoveWaypoint,
+  nodeDropLabel,
 } from "./motionPathCommit";
 import {
   elementHome,
@@ -386,6 +387,7 @@ export const MotionPathOverlay = memo(function MotionPathOverlay({
     if (x === Math.round(d.initX) && y === Math.round(d.initY)) return;
     const anim =
       d.ref.type === "keyframe" ? selectedGsapAnimations?.find((a) => a.id === animId) : undefined;
+    const label = nodeDropLabel(d.ref);
     commitNodeDrop({
       ref: d.ref,
       at: { x, y },
@@ -394,7 +396,7 @@ export const MotionPathOverlay = memo(function MotionPathOverlay({
       selection,
       iframe: iframeRef.current,
       commitMutation,
-    }).catch((error: unknown) => reportFailure(error, selection, "drag", "Move keyframe"));
+    }).catch((error: unknown) => reportFailure(error, selection, "drag", label));
     // Park the playhead on the edited keyframe's time so the element previews AT
     // that keyframe. Without it, a playhead sitting before the tween renders the
     // element's base pose — the edit (correct on the path) looks like it vanished.

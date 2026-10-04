@@ -61,6 +61,12 @@ type NodeDrop = {
   commitMutation: CommitFn;
 };
 
+/** What a node drop does, for its undo entry and its failure report. */
+export function nodeDropLabel(ref: MotionNodeRef): string {
+  if (ref.type !== "keyframe") return "Move waypoint";
+  return usePlayerStore.getState().autoKeyframeEnabled ? "Move keyframe" : "Move animation path";
+}
+
 /** A dropped keyframe goes through the layer drag's writer, GSAP's live values backfilling others
  *  (auto-keyframe off, #1808: the whole path shifts); a waypoint moves in place. */
 export function commitNodeDrop(drop: NodeDrop): Promise<void> {
@@ -71,13 +77,14 @@ export function commitNodeDrop(drop: NodeDrop): Promise<void> {
   const callbacks = { commitMutation: writes.commit! };
   let done: Promise<unknown>;
   const store = usePlayerStore.getState();
+  const step = ref.step == null ? undefined : anim.keyframes?.keyframes[ref.step];
+  const pct = step?.percentage ?? ref.pct;
   if (store.autoKeyframeEnabled) {
     const selected = store.activeKeyframePct;
-    const step = ref.step == null ? undefined : anim.keyframes?.keyframes[ref.step];
-    store.setActiveKeyframePct(step?.percentage ?? ref.pct);
+    store.setActiveKeyframePct(pct);
     const live = readGsapPositionFromIframe(iframe, selectorFor(selection) ?? "");
     done = commitValueAtPlayhead(selection, anim, at, iframe, callbacks, {
-      label: "Move keyframe",
+      label: nodeDropLabel(ref),
       backfill: live ?? undefined,
     })
       .then(assertGsapEditPersisted)
@@ -86,8 +93,8 @@ export function commitNodeDrop(drop: NodeDrop): Promise<void> {
         throw error;
       });
   } else {
-    const label = "Move animation path";
-    done = commitWholePropertyOffset(selection, anim, at, ref.pct, iframe, callbacks, label);
+    const label = nodeDropLabel(ref);
+    done = commitWholePropertyOffset(selection, anim, at, pct, iframe, callbacks, label);
   }
   return done.then(() => trackPreviewEditResult("motion_path", "drag", writes.finish()));
 }

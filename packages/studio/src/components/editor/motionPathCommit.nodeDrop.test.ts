@@ -7,7 +7,7 @@ import { GsapEditBlockedError } from "../../hooks/gsapEditOutcome";
 import { commitNodeDrop } from "./motionPathCommit";
 
 afterEach(() => {
-  usePlayerStore.setState({ currentTime: 0, activeKeyframePct: null });
+  usePlayerStore.setState({ currentTime: 0, activeKeyframePct: null, requestedSeekTime: null });
   document.body.innerHTML = "";
 });
 
@@ -100,6 +100,7 @@ it("a drop on an array step's node edits that step, though the path spaces nodes
     { x: 40, y: 90 },
     { x: 120, y: 30 },
   ]);
+  expect(usePlayerStore.getState().requestedSeekTime).toBe(2);
 });
 
 it("a drop the writer refuses rejects with the reason, writes nothing and selects nothing", async () => {
@@ -131,4 +132,41 @@ it("a drop the writer refuses rejects with the reason, writes nothing and select
   await expect(drop).rejects.toBeInstanceOf(GsapEditBlockedError);
   expect(commitMutation).not.toHaveBeenCalled();
   expect(usePlayerStore.getState().activeKeyframePct).toBeNull();
+});
+
+it("with auto-keyframe off, a step's node shifts the path by its own keyframe's move", async () => {
+  const el = document.body.appendChild(document.createElement("div"));
+  el.id = "box";
+  const selection = { id: "box", selector: "#box", element: el } as DomEditSelection;
+  // Steps of 4 s, 1 s and 1 s: drawn at 0/50/100%, parsed at their step ends.
+  const keys = tween({
+    id: "#box-to-0-position",
+    method: "to",
+    properties: {},
+    resolvedStart: 0,
+    duration: 6,
+    keyframes: {
+      format: "object-array",
+      keyframes: [66.7, 83.3, 100].map((percentage, i) => ({
+        percentage,
+        properties: { x: 60 * (i + 1), y: 0 },
+      })),
+    },
+  });
+  usePlayerStore.setState({ autoKeyframeEnabled: false, activeKeyframePct: null });
+  const commitMutation = vi.fn(async () => {});
+
+  await commitNodeDrop({
+    ref: { type: "keyframe", pct: 50, step: 1 },
+    at: { x: 157, y: 0 },
+    animId: keys.id,
+    anim: keys,
+    selection,
+    iframe: null,
+    commitMutation,
+  });
+
+  const [mutation] = commitMutation.mock.calls.map((call) => call[0] as Record<string, never>);
+  const xs = (mutation!.keyframes as { properties: { x: number } }[]).map((kf) => kf.properties.x);
+  expect(xs).toEqual([97, 157, 217]);
 });

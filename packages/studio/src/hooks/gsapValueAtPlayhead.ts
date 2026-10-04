@@ -165,6 +165,23 @@ function heldEnds(
   return held;
 }
 
+/** An array step without a channel holds it, where a percentage keyframe would tween through it. */
+function holdOmittedChannels(steps: Keyframe[], implicit: ImplicitEndValue): boolean {
+  const props = new Set(steps.flatMap((kf) => Object.keys(kf.properties)));
+  for (const prop of props) {
+    let held: number | string | null | undefined;
+    for (const kf of steps) {
+      if (kf.properties[prop] != null) held = kf.properties[prop];
+      else {
+        held ??= implicit(prop, "start");
+        if (held == null) return false;
+        kf.properties[prop] = held;
+      }
+    }
+  }
+  return true;
+}
+
 /** On a keyframe, change it; between two, add one at the playhead; outside the tween, add one there
  *  and keep the authored ends. Values come from the file's tween or GSAP's parse, never the DOM. */
 // fallow-ignore-next-line complexity
@@ -177,6 +194,7 @@ export function planValueAtPlayhead(edit: PlayheadEdit): PlayheadEditPlan {
   if ("reason" in norm) return refuse(norm.reason);
   const keyframes = norm.keyframes;
   const authored = keyframes.length;
+  const steps = anim.keyframes?.format === "object-array" ? [...keyframes] : [];
   // GSAP runs `scale` beside scaleX/scaleY and the longhands win, so a per-axis edit splits it.
   if ("scaleX" in values || "scaleY" in values) {
     for (const kf of keyframes) {
@@ -232,6 +250,7 @@ export function planValueAtPlayhead(edit: PlayheadEdit): PlayheadEditPlan {
     upsert(keyframes, before ? 0 : 100, { ...held, ...values }, before ? undefined : linear);
   }
 
+  if (!holdOmittedChannels(steps, edit.implicitEndValue)) return refuse("implicit-end-unknown");
   keyframes.sort((a, b) => a.percentage - b.percentage);
   return {
     ok: true,
