@@ -66,12 +66,17 @@ it("reads plain array nodes where the lane puts them, though GSAP fills in step 
   expect(read?.keyframes.map((kf) => kf.percentage)).toEqual(parsed.map((kf) => kf.percentage));
 });
 
-it("times array steps on their own timeline, which GSAP stretches over the tween", () => {
-  // Three default 0.5 s steps stretched over 3 s: GSAP reaches the middle one at 2 s.
+// Three default 0.5 s steps stretched over 3 s: GSAP reaches the middle one at 2 s, where the parse
+// places it at 50%.
+it.each([
+  ["at the playhead, timing array steps on their own timeline", undefined],
+  ["selected in the lane, in place", 50],
+])("changes the middle array keyframe %s", (_, selectedPct) => {
   const { plan, shown } = dragAndReplay(
     script("keyframes: [{ x: 60 }, { x: 120 }, { x: 180 }], duration: 3"),
     130,
     2,
+    selectedPct,
   );
   expect(plan.ok && plan.mutation.keyframes.map((kf) => kf.properties.x)).toEqual([60, 130, 180]);
   expect(shown).toBeCloseTo(130, 2);
@@ -91,18 +96,6 @@ it("holds a channel at its start until the array step that first animates it", (
   const replay = play(written!, 1);
   expect(gsap.getProperty("#x", "y")).toBe(0);
   replay.timeline.kill();
-});
-
-it("changes a selected array keyframe in place, though GSAP reaches it at its step's end", () => {
-  // The parse places the middle of three equal steps at 50%; GSAP reaches it at 2 s of 3.
-  const { plan, shown } = dragAndReplay(
-    script("keyframes: [{ x: 60 }, { x: 120 }, { x: 180 }], duration: 3"),
-    130,
-    2,
-    50,
-  );
-  expect(plan.ok && plan.mutation.keyframes.map((kf) => kf.properties.x)).toEqual([60, 130, 180]);
-  expect(shown).toBeCloseTo(130, 2);
 });
 
 it("keeps GSAP's default ease, by name, for a tween that authors none", () => {

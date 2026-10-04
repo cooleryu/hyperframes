@@ -48,11 +48,8 @@ export const SUPPORTED_PROPS = [
   "innerText",
 ];
 
-// ── Tween vars that configure the tween rather than name a channel ──────────
-
 /** Keys stored on dedicated GsapAnimation fields (not in properties/extras). */
 export const BUILTIN_VAR_KEYS: ReadonlySet<string> = new Set(["duration", "ease", "delay"]);
-/** Keys never preserved (callbacks / advanced patterns). */
 export const DROPPED_VAR_KEYS: ReadonlySet<string> = new Set([
   "onComplete",
   "onStart",

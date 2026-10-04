@@ -4,7 +4,7 @@ import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import { usePlayerStore } from "../player/store/playerStore";
 import { GSAP_EDIT_BLOCK_COPY, GsapEditBlockedError } from "./gsapEditOutcome";
-import { liveTween, previewWith, tween } from "./gsapParsedTween.test-helpers";
+import { boxSteps, liveTween, previewWith, tween } from "./gsapParsedTween.test-helpers";
 import { tryGsapResizeIntercept } from "./gsapResizeIntercept";
 import { tryGsapDragIntercept, tryGsapRotationIntercept } from "./gsapRuntimeBridge";
 import { planValueAtPlayhead, planValueEdit, type PlayheadEdit } from "./gsapValueAtPlayhead";
@@ -166,31 +166,12 @@ describe("a move on a GSAP-animated layer, at the playhead", () => {
   });
 
   it("adds a keyframe between two steps of a keyframes array", async () => {
-    const keys = tween({
-      id: "#box-to-0-position",
-      method: "to",
-      properties: {},
-      resolvedStart: 0,
-      duration: 3,
-      keyframes: {
-        format: "object-array",
-        keyframes: [
-          // The parse rounds the step to 66.7%; GSAP times it at 2 s of 3.
-          { percentage: 66.7, properties: { x: 60 } },
-          { percentage: 100, properties: { x: 120 } },
-        ],
-      },
-    });
-    const steps = [
-      { startTime: () => 0, duration: () => 2 },
-      { startTime: () => 2, duration: () => 1 },
-    ];
-    const live = liveTween(
-      el,
-      { start: 0, duration: 3, vars: { keyframes: [] } },
-      { parts: steps },
-    );
-    const { mutations } = await drag([keys], [live], { time: 1, base: [30, 0], dx: 10 });
+    // The parse rounds the first step to 66.7%; GSAP times it at 2 s of 3.
+    const { keys, live } = boxSteps([
+      [2, { x: 60 }],
+      [1, { x: 120 }],
+    ]);
+    const { mutations } = await drag([keys], [live(el)], { time: 1, base: [30, 0], dx: 10 });
     expect(mutations.map((m) => m.type)).toEqual(["replace-with-keyframes"]);
     // An array step eases linearly unless it says otherwise; percentage keyframes would not.
     expect(mutations[0].keyframes).toEqual([

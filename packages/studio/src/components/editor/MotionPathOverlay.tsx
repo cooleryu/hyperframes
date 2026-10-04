@@ -70,6 +70,7 @@ const NODE_PX = 6; // node radius in screen pixels (kept constant across zoom)
 // (select the keyframe); at or above it the gesture commits a move. Screen-space
 // (not composition px) so it behaves identically at any zoom.
 const DRAG_THRESHOLD_PX = 3;
+const noToast = () => {};
 
 /**
  * Draws the selected element's GSAP motion path over the canvas — a dashed
@@ -82,8 +83,6 @@ const DRAG_THRESHOLD_PX = 3;
  * motion.
  */
 // fallow-ignore-next-line complexity
-const noToast = () => {};
-
 export const MotionPathOverlay = memo(function MotionPathOverlay({
   iframeRef,
   selection,

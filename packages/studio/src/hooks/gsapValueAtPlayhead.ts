@@ -81,15 +81,13 @@ function refuse(reason: PlayheadEditRefusal): { ok: false; reason: PlayheadEditR
   return { ok: false, reason };
 }
 
-/** What a percentage keyframe can't stand in for in an array step: the rewrite would retime, re-run,
- *  re-apply or drop it. Null for an absolute value on an animated channel. */
+/** Why a percentage keyframe can't stand in for this array step entry, or null when it can. */
 function stepBlock([key, value]: [string, number | string]): PlayheadEditRefusal | null {
   if (key === "delay") return "array-step-delay";
   if (/^on[A-Z]/.test(key)) return "array-step-callback";
   if (isTweenConfigKey(key)) return "array-step-config";
   if (typeof value === "number") return null;
   if (value.startsWith("__raw:")) return "array-step-computed";
-  // GSAP resolves `random(` and `+=` anywhere in a string, e.g. "blur(random(1, 9)px)".
   if (value.includes("random(")) return "array-step-random";
   return /[-+*/]=/.test(value) ? "array-step-relative" : null;
 }
@@ -221,13 +219,14 @@ export function planValueAtPlayhead(edit: PlayheadEdit): PlayheadEditPlan {
     }
   }
   const backfilled: Record<string, number> = {};
-  // A step that animates nothing is a pause: it holds the step before it, not the backfill.
-  const pauses = new Set(steps.filter((kf) => Object.keys(kf.properties).length === 0));
+  const pauseStepsHoldThePrevious = new Set(
+    steps.filter((kf) => Object.keys(kf.properties).length === 0),
+  );
   for (const [prop, value] of Object.entries(edit.backfill ?? {})) {
     if (!(prop in values) || keyframes.some((kf) => kf.properties[prop] != null)) continue;
     if (edit.holdFromStart && !keyframes.some((kf) => kf.percentage <= 0))
       keyframes.unshift({ percentage: 0, properties: {} });
-    for (const kf of keyframes) if (!pauses.has(kf)) kf.properties[prop] = value;
+    for (const kf of keyframes) if (!pauseStepsHoldThePrevious.has(kf)) kf.properties[prop] = value;
     backfilled[prop] = value;
   }
   if (Object.keys(values).some((prop) => !keyframes.some((kf) => kf.properties[prop] != null)))
